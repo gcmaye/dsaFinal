@@ -398,7 +398,7 @@ def main():
 
     answer.sort(reverse=True, key=lambda x: len(x[0]))
 
-    # funnyTest(answer)
+    funnyTest(answer)
 
     f = open("result.txt", 'r+', encoding='utf-8')
 
