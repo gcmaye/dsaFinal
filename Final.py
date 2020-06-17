@@ -5,9 +5,50 @@ import numpy as np
 from math import log10
 from sys import setrecursionlimit
 from threading import Thread, stack_size
-from pythonds.graphs.adjGraph import Graph
+
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+
+
+class Graph:
+    def __init__(self):
+        self.vertices = {}
+
+    def addVertex(self, key):
+        newVertex = Vertex(key)
+        self.vertices[key] = newVertex
+        return newVertex
+
+    def __contains__(self, n):
+        return n in self.vertices
+
+    def addEdge(self, f, t, cost=0):
+        if f not in self.vertices:
+            self.addVertex(f)
+        if t not in self.vertices:
+            self.addVertex(t)
+        self.vertices[f].addNeighbor(self.vertices[t], cost)
+
+    def __iter__(self):
+        return iter(self.vertices.values())
+
+
+class Vertex:
+    def __init__(self, num):
+        self.id = num
+        self.connectedTo = {}
+        self.color = 'white'
+        self.dist = 0
+        self.disc = 0
+
+    def addNeighbor(self, nbr, weight=0):
+        self.connectedTo[nbr] = weight
+
+    def setColor(self, color):
+        self.color = color
+
+
+# 对数据进行预处理
 
 flist = js.load(open("Film.json", 'r', encoding='utf-8'))
 for film in flist:
@@ -71,13 +112,13 @@ for film in flist:
     for types in film["type"]:
         temp[types] = 1
     film_type[film["id"]] = temp
+# 对数据预处理结束
 
 
 def merge(dict1, dict2):
     """
     合并两个字典，将其类别数量相加
     """
-    # dict1, dict2 = dic1.copy(), dic2.copy()
     for key in dict2:
         if key in dict1:
             dict1[key] += dict2[key]
@@ -86,22 +127,26 @@ def merge(dict1, dict2):
     return dict1
 
 
-def buildGraph(actors, coactors):
-    """创建一个图"""
+def buildGraph():
+    """
+    创建一个图
+    """
     G = Graph()
     for coactor in coactors:
         G.addEdge(coactor[0], coactor[1], 1)
         G.addEdge(coactor[1], coactor[0], 1)
 
     for actor in actors:
-        if actor not in G.vertices:
+        if actor not in G:
             G.addVertex(actor)
 
     return G
 
 
 def dfs(vertex):
-    """递归求出连通分支规模"""
+    """
+    递归求出连通分支的演员名单和标签信息
+    """
     vertex.setColor('black')
 
     connected = [i for i in vertex.connectedTo]
@@ -131,10 +176,8 @@ def bfs(actor_list, G):
     for actor in actor_list:
 
         for _ in actor_list:
-            # 设置默认距离-1
-            G[_].dist = -1
-            # 设置默认为未探索
-            G[_].disc = False
+            G[_].dist = -1  # 设置默认距离-1
+            G[_].disc = False  # 设置默认为未探索
 
         _bfs(actor, G, actor_list)
 
@@ -145,6 +188,9 @@ def bfs(actor_list, G):
 
 
 def _bfs(v, G, actor_list):
+    """
+    给当前顶点测定一次距离
+    """
     actor = G[v]
     actor.dist = 0
     actor.disc = True
@@ -179,6 +225,9 @@ def makeDist(vertex):
 
 
 def funnyTest(answer):
+    """
+    一些乱七八糟的测试
+    """
     print(len(actors['']))
     # 合作之王
     co = []
@@ -224,6 +273,9 @@ def funnyTest(answer):
 
 
 def plot(answer):
+    """
+    用matplotlib画图
+    """
     n = 20
 
     # 前20名的规模
@@ -354,52 +406,10 @@ def plot(answer):
     return
 
 
-def main():
+def writeResult(answer, G):
     """
-    主函数
+    将结果写进result.txt
     """
-    G = buildGraph(actors, coactors)
-    print('Graph done!')
-    answer = []
-    for actor in G:
-        if actor.color == "white":
-            result = dfs(actor)
-            # result[0]->该连通分支的演员名单
-            # result[1]->该连通分支的分类统计
-            # result[2]->该连通分支的直径
-            # result[3]->该连通分支的平均星级
-
-            # 第一题
-            # 按照类别大小排序
-            tem = [(j, result[1][j]) for j in result[1]]
-            tem.sort(key=lambda x: x[1], reverse=True)
-            result[1] = tem
-
-            # 第二题
-            if len(result[0]) < 100:
-                diameter = bfs(result[0], G.vertices)
-                result.append(diameter)
-            else:
-                # 最大的那个不计算直径
-                result.append(-1)
-
-            # 求出平均星级
-            star = {}
-            for shit in result[0]:
-                lst = actors[shit]
-                for film in lst:
-                    if film not in star:
-                        star[film] = film_score[film]
-            avg = np.mean(list(star.values()))
-            avg = round(avg, 2)
-            result.append(avg)
-
-            answer.append(result)
-
-    answer.sort(reverse=True, key=lambda x: len(x[0]))
-
-    funnyTest(answer)
-
     f = open("result.txt", 'r+', encoding='utf-8')
 
     str1 = '=' * 16 + "问题一&问题二" + '=' * 16 + '\n'
@@ -476,6 +486,54 @@ def main():
 
     f.write(str1)
     f.close()
+
+
+def main():
+    """
+    主函数，整个程序的入口
+    """
+    G = buildGraph()
+    print('Graph done!')
+    answer = []
+    for actor in G:
+        if actor.color == "white":
+            result = dfs(actor)
+            # result[0]->该连通分支的演员名单
+            # result[1]->该连通分支的分类统计
+            # result[2]->该连通分支的直径
+            # result[3]->该连通分支的平均星级
+
+            # 第一题
+            # 按照类别大小排序
+            tem = [(j, result[1][j]) for j in result[1]]
+            tem.sort(key=lambda x: x[1], reverse=True)
+            result[1] = tem
+
+            # 第二题
+            if len(result[0]) < 100:
+                diameter = bfs(result[0], G.vertices)
+                result.append(diameter)
+            else:
+                # 最大的那个不计算直径
+                result.append(-1)
+
+            # 求出平均星级
+            star = {}
+            for shit in result[0]:
+                lst = actors[shit]
+                for film in lst:
+                    if film not in star:
+                        star[film] = film_score[film]
+            avg = np.mean(list(star.values()))
+            avg = round(avg, 2)
+            result.append(avg)
+
+            answer.append(result)
+
+    answer.sort(reverse=True, key=lambda x: len(x[0]))
+
+    writeResult(answer, G)
+    funnyTest(answer)
     plot(answer)
     return 0
 
