@@ -178,6 +178,51 @@ def makeDist(vertex):
             nbr.dist = vertex.dist + 1
 
 
+def funnyTest(answer):
+    print(len(actors['']))
+    # 合作之王
+    co = []
+    for coactor in coactors:
+        co.append((coactor, len(coactors[coactor])))
+
+    co.sort(reverse=True, key=lambda x: x[1])
+    print(co[:30])
+
+    # 好兄弟&好闺蜜
+    bro = 0
+    sis = 0
+    for film in flist:
+        a = film["actor"]
+        if '休·弗拉瑟' in a and '大卫·苏切' in a and '菲利普·杰克森' in a:
+            bro += 1
+        elif '小原乃梨子' in a and '野村道子' in a and '立壁和也' in a and '肝付兼太' in a:
+            sis += 1
+
+    print('bro=%d, sis=%d' % (bro, sis))
+
+    # 统计烂片之王和好片之王
+    actor_star = []
+    for actor in actors:
+        if len(actors[actor]) >= 12:
+            temp = [film_score[i] for i in actors[actor]]
+            avg = np.mean(temp)
+            avg = round(avg, 2)
+            actor_star.append((actor, avg))
+
+    actor_star.sort(reverse=True, key=lambda x: x[1])
+    print(len(actor_star))
+    print(actor_star[-1:-40:-1])
+
+    nl = []
+    for film in flist:
+        if film["director"] == "克里斯托弗·诺兰":
+            nl.append(film["star"])
+    avg = np.mean(nl)
+    avg = round(avg, 2)
+    print(len(nl))
+    print(avg)
+
+
 def plot(answer):
     n = 20
 
@@ -352,6 +397,8 @@ def main():
             answer.append(result)
 
     answer.sort(reverse=True, key=lambda x: len(x[0]))
+
+    # funnyTest(answer)
 
     f = open("result.txt", 'r+', encoding='utf-8')
 
