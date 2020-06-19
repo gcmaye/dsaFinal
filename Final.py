@@ -44,9 +44,6 @@ class Vertex:
     def addNeighbor(self, nbr, weight=0):
         self.connectedTo[nbr] = weight
 
-    def setColor(self, color):
-        self.color = color
-
 
 # 对数据进行预处理
 
@@ -57,7 +54,7 @@ for film in flist:
     film["actor"] = film["actor"].split(",")
     del film["_id"]
 
-# 演员及其演过的电影名单 -> dict
+# 演员及其演过的电影名单 -> dict（以id呈现）
 # '林更新': ['快手枪手快枪手', '长城 The Great Wall', '梦回鹿鼎记',
 #  '三少爷的剑', '痞子英雄2：黎明升起 痞子英雄2：黎明再起', '西游伏妖篇',
 #  '狄仁杰之神都龙王', '智取威虎山', '2018把乐带回家', '我是路人甲',
@@ -66,12 +63,12 @@ actors = {}
 for film in flist:
     for actor in film["actor"]:
         if actor in actors:
-            actors[actor].add(film["id"])
+            actors[actor].append(film["id"])
         else:
-            actors[actor] = {film["id"]}
+            actors[actor] = [film["id"]]
 
 # 合作演出名单 -> dict
-# ('张静初', '林更新'): {'我是路人甲', '快手枪手快枪手'}
+# ('张静初', '林更新'): {'我是路人甲', '快手枪手快枪手'}（以id呈现）
 coactors = {}
 for film in flist:
     for act1 in film["actor"]:
@@ -83,36 +80,21 @@ for film in flist:
                 else:
                     coactors[coactors_film] = {film["id"]}
 
-# 演员演过的电影标签统计 -> dict
-# '林更新': {'喜剧': 5, '动作': 8, '奇幻': 3, '冒险': 2, '短片': 2,
-#  '武侠': 2, '剧情': 4, '古装': 4, '犯罪': 2, '悬疑': 1, '战争': 1,
-#  '音乐': 1, '歌舞': 1, '爱情': 2, '真人秀': 1}
-actor_tag = {}
-for film in flist:
-    for actor in film["actor"]:
-        if actor not in actor_tag:
-            actor_tag[actor] = {}
-        for types in film["type"]:
-            if types in actor_tag[actor]:
-                actor_tag[actor][types] += 1
-            else:
-                actor_tag[actor][types] = 1
-
 # 电影评分信息 -> dict
-# '快手枪手快枪手': 5.1
+# '快手枪手快枪手': 5.1（以id呈现）
 film_score = {}
 for film in flist:
     film_score[film["id"]] = film["star"]
 
 # 获得电影类别信息 -> dict
-# '快手枪手快枪手': {'喜剧': 1, '动作': 1}
+# '快手枪手快枪手': {'喜剧': 1, '动作': 1}（以id呈现）
 film_type = {}
 for film in flist:
     temp = {}
     for types in film["type"]:
         temp[types] = 1
     film_type[film["id"]] = temp
-# 对数据预处理结束
+# 数据预处理结束
 
 
 def merge(dict1, dict2):
@@ -145,25 +127,26 @@ def buildGraph():
 
 def dfs(vertex):
     """
-    递归求出连通分支的演员名单和标签信息
+    递归求出连通分支的演员名单
     """
-    vertex.setColor('black')
+    vertex.color = 'black'
 
     connected = [i for i in vertex.connectedTo]
     connected_colors = [i.color for i in connected]
 
     if "white" in connected_colors:
-        dict0 = {}
         actor_list = []
+
         for item in connected:
             if item.color == "white":
                 result = dfs(item)
-                actor_list.extend(result[0])
-                dict0 = merge(dict0, result[1])
-        actor_list.append(vertex.id)
-        return [actor_list, dict0]  # 分别是演员名单，电影标签统计
+                actor_list.extend(result)
 
-    return [[vertex.id], actor_tag[vertex.id]]
+        actor_list.append(vertex.id)
+
+        return actor_list  # 演员名单
+
+    return [vertex.id]
 
 
 def bfs(actor_list, G):
@@ -497,17 +480,24 @@ def main():
     answer = []
     for actor in G:
         if actor.color == "white":
-            result = dfs(actor)
+            result = [dfs(actor)]
             # result[0]->该连通分支的演员名单
             # result[1]->该连通分支的分类统计
             # result[2]->该连通分支的直径
             # result[3]->该连通分支的平均星级
 
             # 第一题
-            # 按照类别大小排序
-            tem = [(j, result[1][j]) for j in result[1]]
+            f = set()
+            for player in result[0]:
+                f.update(actors[player])
+
+            dict0 = {}
+            for i in f:
+                dict0 = merge(dict0, film_type[i])
+
+            tem = [(j, dict0[j]) for j in dict0]
             tem.sort(key=lambda x: x[1], reverse=True)
-            result[1] = tem
+            result.append(tem)
 
             # 第二题
             if len(result[0]) < 100:
